@@ -6,6 +6,7 @@
 #   "click",
 #   "rich",
 #   "pyyaml",
+#   "platformdirs",
 # ]
 # ///
 """
@@ -31,6 +32,7 @@ import yaml
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from mcp.client.streamable_http import streamablehttp_client
+from platformdirs import user_config_dir
 from mcp.shared.exceptions import McpError
 from rich.console import Console
 from rich.json import JSON
@@ -48,6 +50,11 @@ _CONFIG_SEARCH_PATHS = [
     "mcp-cli.yml",
 ]
 
+# Platform-appropriate config dir: ~/.config/mcp-cli (Linux),
+# ~/Library/Application Support/mcp-cli (macOS),
+# %APPDATA%\mcp-cli (Windows).
+_USER_CONFIG_DIR = Path(user_config_dir("mcp-cli"))
+
 
 def _find_config_file() -> Optional[Path]:
     if env_path := os.environ.get("MCP_CLI_CONFIG"):
@@ -61,7 +68,7 @@ def _find_config_file() -> Optional[Path]:
             return p
 
     for candidate in [
-        Path.home() / ".config" / "mcp-cli" / "config.yaml",
+        _USER_CONFIG_DIR / "config.yaml",
         Path.home() / ".mcp-cli.yaml",
     ]:
         if candidate.exists():
@@ -367,9 +374,9 @@ def main(use_rich):
 
     \b
     Config file (searched in order):
-      $MCP_CLI_CONFIG            env var pointing to a YAML file
-      .mcp-cli.yaml              current directory
-      ~/.config/mcp-cli/config.yaml
+      $MCP_CLI_CONFIG              env var pointing to a YAML file
+      .mcp-cli.yaml                current directory
+      <platform config dir>/mcp-cli/config.yaml
       ~/.mcp-cli.yaml
 
     \b
