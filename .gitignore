@@ -4,3 +4,5 @@ scripts/pipx.pyz
 scripts/.pipx/
 scripts/.bin/
 skills/ensue-memory/scripts/*
+__pycache__/
+*.pyc
