@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # /// script
-# requires-python = ">=3.9"
+# requires-python = ">=3.11"
 # dependencies = [
 #   "mcp>=1.0",
 #   "click",
@@ -37,14 +37,6 @@ from platformdirs import user_config_dir
 from mcp.shared.exceptions import McpError
 from rich.console import Console
 from rich.json import JSON
-
-# BaseExceptionGroup is a builtin only on Python 3.11+. On 3.9/3.10 fall back to
-# the `exceptiongroup` backport (pulled in transitively by anyio/mcp), so the
-# error-handling path doesn't itself raise NameError.
-try:
-    BaseExceptionGroup
-except NameError:  # pragma: no cover - Python < 3.11
-    from exceptiongroup import BaseExceptionGroup
 
 console = Console()
 
