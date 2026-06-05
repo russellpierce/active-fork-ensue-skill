@@ -16,6 +16,12 @@ servers:
     url: https://my-mcp-server.example.com/mcp
     token: replace-with-your-token
 
+  # SSE server — older MCP servers that use Server-Sent Events transport
+  legacy:
+    transport: sse
+    url: https://legacy-mcp-server.example.com/sse
+    token_env: LEGACY_TOKEN
+
   # stdio server — MCP server launched as a subprocess
   local:
     transport: stdio

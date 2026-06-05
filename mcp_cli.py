@@ -30,6 +30,7 @@ from typing import Any, Optional
 import click
 import yaml
 from mcp import ClientSession, StdioServerParameters
+from mcp.client.sse import sse_client
 from mcp.client.stdio import stdio_client
 from mcp.client.streamable_http import streamablehttp_client
 from platformdirs import user_config_dir
@@ -129,6 +130,15 @@ async def _http_session(url: str, token: Optional[str]):
 
 
 @asynccontextmanager
+async def _sse_session(url: str, token: Optional[str]):
+    headers = {"Authorization": f"Bearer {token}"} if token else {}
+    async with sse_client(url, headers=headers) as (read, write):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+            yield session
+
+
+@asynccontextmanager
 async def _stdio_session(command: str, args: list[str], env: dict):
     params = StdioServerParameters(command=command, args=args, env=env)
     async with stdio_client(params) as (read, write):
@@ -150,17 +160,20 @@ async def create_session(server_config: dict):
         env = {**os.environ, **server_config.get("env", {})}
         async with _stdio_session(command, args, env) as session:
             yield session
-    else:
+    elif transport in ("http", "sse"):
         url = server_config.get("url")
         if not url:
-            raise click.ClickException("HTTP server config requires 'url'")
+            raise click.ClickException(f"{transport.upper()} server config requires 'url'")
         token = None
         if token_env := server_config.get("token_env"):
             token = os.environ.get(token_env)
         if not token:
             token = server_config.get("token")
-        async with _http_session(url, token) as session:
+        session_fn = _sse_session if transport == "sse" else _http_session
+        async with session_fn(url, token) as session:
             yield session
+    else:
+        raise click.ClickException(f"Unknown transport '{transport}'. Use http, sse, or stdio.")
 
 
 async def list_tools(server_config: dict) -> list[dict[str, Any]]:
@@ -383,6 +396,12 @@ def main(use_rich):
     Or configure via environment variables alone:
       MCP_CLI_<NAME>_URL=https://...
       MCP_CLI_<NAME>_TOKEN=secret
+
+    \b
+    Supported transports (default: http):
+      http    Streamable HTTP (MCP spec 2025-03-26+)
+      sse     Server-Sent Events (older MCP servers)
+      stdio   Subprocess over stdin/stdout
     """
 
 
