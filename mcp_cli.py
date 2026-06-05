@@ -38,6 +38,14 @@ from mcp.shared.exceptions import McpError
 from rich.console import Console
 from rich.json import JSON
 
+# BaseExceptionGroup is a builtin only on Python 3.11+. On 3.9/3.10 fall back to
+# the `exceptiongroup` backport (pulled in transitively by anyio/mcp), so the
+# error-handling path doesn't itself raise NameError.
+try:
+    BaseExceptionGroup
+except NameError:  # pragma: no cover - Python < 3.11
+    from exceptiongroup import BaseExceptionGroup
+
 console = Console()
 
 # ============================================================================
@@ -257,6 +265,12 @@ def build_command(tool: dict, server_config: dict) -> click.Command:
     props = schema.get("properties") or {}
     required = set(schema.get("required") or [])
 
+    # Click normalizes a long option like ``--foo-bar`` to the param key
+    # ``foo_bar``. Schema property names may themselves contain hyphens, so keep
+    # a map from the normalized key back to the original name to avoid sending
+    # the tool a mangled argument name (and to look up the right type).
+    key_to_name = {name.replace("-", "_"): name for name in props}
+
     params = [
         click.Option(
             [f"--{name.replace('_', '-')}"],
@@ -269,11 +283,12 @@ def build_command(tool: dict, server_config: dict) -> click.Command:
 
     def callback(**kwargs):
         use_rich = click.get_current_context().find_root().params.get("use_rich", False)
-        args = {
-            k.replace("-", "_"): _parse_arg(v, props.get(k.replace("-", "_"), {}).get("type"))
-            for k, v in kwargs.items()
-            if v is not None
-        }
+        args = {}
+        for k, v in kwargs.items():
+            if v is None:
+                continue
+            name = key_to_name.get(k, k)
+            args[name] = _parse_arg(v, props.get(name, {}).get("type"))
         try:
             result = run_async(call_tool(server_config, tool["name"], args))
         except BaseException as e:
