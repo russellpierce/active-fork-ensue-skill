@@ -1,0 +1,26 @@
+# mcp-cli.yaml — example configuration
+# Copy to .mcp-cli.yaml (or mcp-cli.yaml) in your project root and fill in details.
+#
+# Usage after configuring:
+#   mcp-cli <server-name> <tool-name> [--option value ...]
+#   mcp-cli --help
+
+servers:
+  # HTTP server — token read from an environment variable (recommended)
+  ensue:
+    url: https://api.ensue-network.ai/
+    token_env: ENSUE_API_KEY   # name of the env var that holds the token
+
+  # HTTP server — inline token (avoid for production; prefer token_env)
+  myapi:
+    url: https://my-mcp-server.example.com/mcp
+    token: replace-with-your-token
+
+  # stdio server — MCP server launched as a subprocess
+  local:
+    transport: stdio
+    command: python3
+    args:
+      - /path/to/my_mcp_server.py
+    env:                       # extra env vars passed to the subprocess
+      MY_SERVER_VAR: value

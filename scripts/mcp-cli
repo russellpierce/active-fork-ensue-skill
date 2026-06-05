@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Wrapper that ensures pipx is available, then runs mcp_cli.py under pipx.
+# Bootstraps pipx.pyz to scripts/ if not already present.
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(dirname "$SCRIPT_DIR")"
+
+PIPX_PYZ="$SCRIPT_DIR/pipx.pyz"
+if [ ! -f "$PIPX_PYZ" ]; then
+  echo "Downloading pipx standalone zipapp..." >&2
+  if ! curl -sLf "https://github.com/pypa/pipx/releases/latest/download/pipx.pyz" -o "$PIPX_PYZ"; then
+    echo "Failed to download pipx" >&2
+    exit 1
+  fi
+  chmod +x "$PIPX_PYZ"
+fi
+
+export PIPX_HOME="$SCRIPT_DIR/.pipx"
+exec python3 "$PIPX_PYZ" run "$REPO_ROOT/mcp_cli.py" "$@"
