@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Wrapper for mcp_cli.py.
+# By default runs the script directly with python3 (dependencies must be installed).
+# Pass --curl to bootstrap pipx.pyz via curl and run in an isolated venv instead.
+
+set -eo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(dirname "$SCRIPT_DIR")"
+
+# Consume --curl before forwarding remaining args to the Python script.
+USE_CURL=0
+ARGS=()
+for arg in "$@"; do
+  if [ "$arg" = "--curl" ]; then
+    USE_CURL=1
+  else
+    ARGS+=("$arg")
+  fi
+done
+
+if [ "$USE_CURL" = "1" ]; then
+  PIPX_PYZ="$SCRIPT_DIR/pipx.pyz"
+  if [ ! -f "$PIPX_PYZ" ]; then
+    echo "Downloading pipx standalone zipapp..." >&2
+    if ! curl -sLf "https://github.com/pypa/pipx/releases/latest/download/pipx.pyz" -o "$PIPX_PYZ"; then
+      echo "Failed to download pipx" >&2
+      exit 1
+    fi
+    chmod +x "$PIPX_PYZ"
+  fi
+  export PIPX_HOME="$SCRIPT_DIR/.pipx"
+  exec python3 "$PIPX_PYZ" run "$REPO_ROOT/mcp_cli.py" "${ARGS[@]+"${ARGS[@]}"}"
+else
+  exec python3 "$REPO_ROOT/mcp_cli.py" "${ARGS[@]+"${ARGS[@]}"}"
+fi
